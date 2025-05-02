@@ -1,0 +1,37 @@
+const User = require("../models/user");
+const jwt = require("jsonwebtoken");
+
+const IsLoggedIn = async (req, res, next) => {
+  try {
+    // Get token from cookies, body, or authorization header
+    let token = req.cookies.token || req.body.token;
+    
+    // Check Authorization header if token not found in cookies or body
+    const authHeader = req.header("Authorization");
+    if (!token && authHeader) {
+      token = authHeader.replace("Bearer ", "");
+    }
+
+    if (!token) {
+      return res.redirect('/login');
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Get user from database
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.redirect('/login');
+    }
+
+    // Add user to request object
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error('Auth error:', error);
+    res.redirect('/login');
+  }
+};
+
+module.exports = IsLoggedIn;
